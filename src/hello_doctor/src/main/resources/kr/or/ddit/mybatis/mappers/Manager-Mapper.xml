@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Manager-Mapper">
+
+<sql id="userChoice">
+	<if test = "userChoice == 'a'.toString()">
+
+	</if>
+	<if test="userChoice == 'n'.toString()">
+		and d_name like '%'||#{keyword}||'%'
+	</if>
+	<if test="userChoice == 'm'.toString()">
+		and b.ma_name like '%'||#{keyword}||'%'
+	</if>
+</sql>
+
+
+<select id="doctorListForPage" resultType="doctorListVO">
+select
+    a.d_id
+  , a.ma_no
+  , a.d_name
+  , a.tel
+  , a.status
+  , a.regdate
+  , a.resident_num
+  , a.account_status
+  , a.retiredate
+  , a.sus_startdate
+  , a.sus_enddate
+  , b.ma_name
+from
+    doctor a, major b
+where a.ma_no = b.ma_no
+    <include refid="userChoice"/>
+</select>
+
+<select id="doctorListCount" resultType="int">
+	select
+		count(*)
+	from
+		doctor a, major b
+	where a.ma_no = b.ma_no
+	<include refid="userChoice"></include>
+</select>
+
+<select id="doctorStatus" resultType="doctorListVO" parameterType="string">
+   select
+    a.d_id
+  , a.ma_no
+  , a.d_name
+  , a.tel
+  , a.status
+  , a.regdate
+  , a.resident_num
+  , a.account_status
+  , a.retiredate
+  , a.sus_startdate
+  , a.sus_enddate
+  , a.d_office
+  , a.d_exam
+  ,(select b.ma_name from major b where a.ma_no = b.ma_no) as maName
+from
+    doctor a
+where a.d_id = #{dId}
+</select>
+
+<update id="susDoctor" parameterType="doctorListVO">
+	update
+		doctor
+	set
+		account_status = '2',
+		sus_startdate = #{susStartDate},
+		sus_enddate = #{susEndDate}
+	where d_id = #{dId}
+</update>
+
+<update id="workDoctor" parameterType="string">
+	update
+		doctor
+	set
+		account_status = '1'
+	where d_id = #{dId}
+</update>
+
+<update id="retireDoctor" parameterType="doctorListVO">
+	update
+		doctor
+	set
+		account_status = '3',
+		retiredate = #{retireDate}
+	where d_id = #{dId}
+</update>
+
+<select id="ipListForPage" resultType="doctorListVO">
+	select
+		ip_no, ip_room
+	from
+		hospital_ip
+</select>
+<select id="ipListForCount" resultType="int">
+	select count(*) from hospital_ip
+</select>
+
+<update id="ipInsert" parameterType="doctorListVO">
+	insert into ip_doc
+	(ip_no, d_id) values(#{ipNo}, #{dId})
+</update>
+
+<select id="memberIp" parameterType="string" resultType="doctorListVO">
+	select ip_no, d_id from ip_doc where d_id = #{dId}
+</select>
+
+<update id="deleteIp" parameterType="doctorListVO">
+	delete from ip_doc where ip_no = #{ipNo} and d_id = #{dId}
+</update>
+
+<select id="mainNotice" resultType="doctorListVO">
+	select
+</select>
+
+<select id="mainMemberList" resultType="doctorListVO">
+	select
+    a.d_id
+  , a.ma_no
+  , a.d_name
+  , a.pwd
+  , a.tel
+  , a.email
+  , a.status
+  , a.d_pic
+  , a.regdate
+  , a.account_status
+  , a.resident_num
+  , a.retiredate
+  , a.sus_startdate
+  , a.sus_enddate
+  , a.otp_qr
+  , a.otp_co
+  , a.d_office
+  , a.d_exam
+  , a.authority
+  , a.enabled
+  from doctor a
+  where not exists (select d_id from ip_doc b where a.d_id = b.d_id)
+</select>
+</mapper>

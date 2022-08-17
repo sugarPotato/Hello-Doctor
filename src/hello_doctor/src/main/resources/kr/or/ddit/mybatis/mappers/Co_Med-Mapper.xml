@@ -1,0 +1,465 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="Co_Med-Mapper">
+	<sql id="search">
+		<if test="searchType == 't'.toString()">
+			and d_name like '%'||#{keyword}||'%'
+		</if>
+		<if test="searchType == 'w'.toString()">
+			and co_disease like '%'||#{keyword}||'%'
+		</if>
+		<if test="searchType == 'c'.toString()">
+			and p_name like '%'||#{keyword}||'%'
+		</if>
+		<if test="searchType == 'tw'.toString()">
+			and (
+			d_name like '%'||#{keyword}||'%'
+			or
+			co_disease like '%'||#{keyword}||'%'
+			)
+		</if>
+		<if test="searchType == 'cw'.toString()">
+			and (
+			p_name like '%'||#{keyword}||'%'
+			or
+			co_disease like '%'||#{keyword}||'%'
+			)
+		</if>
+		<if test="searchType == 'cwt'.toString()">
+			and (
+			p_name like '%'||#{keyword}||'%'
+			or
+			co_disease like '%'||#{keyword}||'%'
+			or
+			d_name like '%'||#{keyword}||'%'
+			)
+		</if>
+	</sql>
+
+	<!-- 전체협진리스트 -->
+	<select id="selectAll" resultType="comedVO">
+		SELECT
+	    	TO_CHAR(c.co_start_date,'YYYY-MM-DD') AS co_start_date
+            ,TO_CHAR(c.end_date,'YYYY-MM-DD')AS end_date
+            ,c.co_ing_status
+	   		,c.co_release
+		   ,c.co_disease
+		   ,a.d_name
+		   ,d.ma_name
+		   ,c.co_no
+		   ,e.p_name
+		FROM
+		    doctor a
+		   ,co_med c
+		   ,major d
+		   ,patient e
+		WHERE
+		    a.d_id = c.co_doc
+		    AND   a.ma_no = d.ma_no
+		    AND   c.p_no = e.p_no
+		<include refid="search"></include>
+		<if test ="userChoice =='t'.toString()">
+			and a.d_name = #{dName}
+		</if>
+		<if test ="userChoice =='w'.toString()">
+			and c.co_disease = #{coDisease}
+		</if>
+		<if test="searchType == 'c'.toString()">
+			and p_name like '%'||#{keyword}||'%'
+		</if>
+		<if test ="userChoice =='cwt'.toString()">
+			and a.d_name =#{dName}
+			or c.co_disease=#{coDisease}
+			or a.p_name = #{pName}
+		</if>
+		order by co_start_date DESC
+	</select>
+
+	<select id="coopermain_doctors" parameterType="string"
+		resultType="comedVO">
+		SELECT
+		    a.d_name
+		   ,b.ma_name
+		FROM
+		    doctor a
+		   ,major b
+		   ,co_doctor c
+		   ,co_med d
+		WHERE
+		    d.co_no = c.co_no
+		    AND   a.ma_no = b.ma_no
+		    AND   a.d_id = c.d_id
+		    AND   c.paty_yn = 'Y'
+		AND d.co_no =#{co_no}
+	</select>
+
+	<select id="selectSearchListCount" resultType="int">
+		SELECT
+   		COUNT(*)
+		FROM( SELECT
+	    	TO_CHAR(c.co_start_date,'YYYY-MM-DD') AS co_start_date
+            ,TO_CHAR(c.end_date,'YYYY-MM-DD')AS end_date
+            ,c.co_ing_status
+	   		,c.co_release
+		   ,c.co_disease
+		   ,a.d_name
+		   ,d.ma_name
+		   ,c.co_no
+		   ,e.p_name
+		FROM
+		    doctor a
+		   ,co_med c
+		   ,major d
+		   ,patient e
+		WHERE
+		    a.d_id = c.co_doc
+		    AND   a.ma_no = d.ma_no
+		    AND   c.p_no = e.p_no
+		<include refid="search"></include>
+		<if test ="userChoice =='t'.toString()">
+			and a.d_name = #{dName}
+		</if>
+		<if test ="userChoice =='w'.toString()">
+			and c.co_disease = #{coDisease}
+		</if>
+		<if test ="userChoice =='tw'.toString()">
+			and a.d_name =#{dName}
+			or c.co_disease=#{coDisease}
+		</if>
+		order by co_start_date DESC
+		)
+	</select>
+
+	<select id="selectSearchProceedingCount" resultType="int">
+		select count(*)
+		from(
+		select
+		to_char(C.co_start_date,'YYYY-MM-DD')as co_start_date,
+		C.co_release,
+		C.co_disease,
+		C.co_no,
+		E.p_name,
+		A.d_name, D.ma_name
+		from doctor A, co_med C, major D, patient E
+		where A.d_id=C.CO_DOC
+		and A.ma_no=D.ma_no
+		and c.p_no = e.p_no
+		and C.co_ing_status='1'
+		<include refid="search"></include>
+		<if test ="userChoice =='t'.toString()">
+			and a.d_name = #{dName}
+		</if>
+		<if test ="userChoice =='w'.toString()">
+			and c.co_disease = #{coDisease}
+		</if>
+		<if test ="userChoice =='tw'.toString()">
+			and a.d_name =#{dName}
+			or c.co_disease=#{coDisease}
+		</if>
+
+		order by C.co_start_date DESC)
+		<include refid="search"/>
+
+	</select>
+	<!-- 진행중 -->
+	<select id="proceedingCooperation" resultType="comedVO">
+		select
+		to_char(C.co_start_date,'YYYY-MM-DD')as co_start_date,
+		to_char(C.end_date,'YYYY-MM-DD')as end_date,
+		C.co_ing_status,
+		C.co_release,
+		C.co_disease,
+		C.co_no,
+		E.p_name,
+		A.d_name, D.ma_name
+		from doctor A, co_med C, major D, patient E
+		where A.d_id=C.CO_DOC
+		and A.ma_no=D.ma_no
+		and c.p_no = e.p_no
+		and C.co_ing_status='1'
+		order by C.co_start_date DESC
+	</select>
+	<select id="proceeding_doctors" parameterType="string"
+		resultType="comedVO">
+		select A.d_name, B.ma_name
+		from doctor A, major B, co_doctor C, co_med D
+		where D.co_no = C.co_no
+		and A.ma_no=B.ma_no
+		and A.d_id = C.d_id
+		and C.paty_yn='Y'
+		and D.co_no=#{co_no}
+	</select>
+
+	<select id="selectSearchCompleteCount" resultType="int">
+		select count(*)
+		from(
+		select
+		to_char(C.co_start_date,'YYYY-MM-DD')as co_start_date,
+		to_char(E.end_date,'YYYY-MM-DD')as end_date,
+		C.co_release,
+		C.co_disease,
+		C.co_no,
+		A.d_name, D.ma_name
+		from doctor A, co_med C, major D, co_end E
+		where A.d_id=C.CO_DOC
+		and A.ma_no=D.ma_no
+		and c.co_no=E.co_no
+		and C.co_ing_status='2'
+		order by C.co_start_date DESC) c where c.co_no is not null
+		<include refid="search"/>
+
+	</select>
+	<!-- 완료된 협진리스트 -->
+	<select id="completeCooperation" resultType="comedVO">
+	SELECT
+		TO_CHAR(c.co_start_date,'YYYY-MM-DD') AS co_start_date
+		,TO_CHAR(c.end_date,'YYYY-MM-DD') AS end_date
+		,c.co_ing_status
+		,c.co_release
+		,c.co_disease
+		,c.co_no
+		,f.p_name
+		,a.d_name
+		,d.ma_name
+	FROM
+		doctor a
+		,co_med c
+		,major d
+		,patient f
+	WHERE
+		a.d_id = c.co_doc
+		AND a.ma_no = d.ma_no
+		AND c.co_ing_status = '2'
+		AND c.p_no = f.p_no
+		ORDER BY
+		c.co_start_date DESC
+	</select>
+	<select id="complete_doctors" parameterType="string" resultType="comedVO">
+		select A.d_name, B.ma_name
+		from doctor A, major B, co_doctor C, co_med D
+		where D.co_no = C.co_no
+		and A.ma_no=B.ma_no
+		and A.d_id = C.d_id
+		and C.paty_yn='Y'
+		and D.co_no=#{co_no}
+	</select>
+
+	<!-- 전체협진리스트 내 전공과 일치 -->
+	<select id ="myCooperation" resultType="comedVO" parameterType="str">
+		select * from
+		(select to_char(C.co_start_date,'YYYY-MM-DD')as co_start_date,
+		to_char(C.end_date,'YYYY-MM-DD')as end_date,
+		C.co_release,
+		C.co_disease,
+		c.co_ing_status,
+		A.d_name,
+		D.ma_name,
+		c.co_no,
+		d.ma_no,
+		f.p_name
+		from doctor A, co_med C, major D, patient F
+		where A.d_id=C.CO_DOC
+		and A.ma_no=D.ma_no
+		and f.p_no = c.p_no)
+		where co_no in
+		(select distinct(co_no) as co_no
+		from co_med
+		where co_doc in
+		(select a.d_id
+		from doctor a, major b
+		where a.ma_no = b.ma_no
+		and b.ma_name = #{ma_no}))
+		order by co_start_date DESC
+	</select>
+	<select id="selectName" parameterType="str" resultType="str">
+	 select distinct b.ma_name
+	 from doctor a, major b
+	 where a.ma_no = b.ma_no
+	 and b.ma_no = #{maName}
+	</select>
+	<select id="myCooperation_doctors" parameterType="string" resultType="comedVO">
+		select A.d_name, B.ma_name
+		from doctor A, major B, co_doctor C, co_med D
+		where D.co_no = C.co_no
+		and A.ma_no=B.ma_no
+		and A.d_id = C.d_id
+		and C.paty_yn='Y'
+		and D.co_no=#{co_no}
+	</select>
+
+	<!-- 진행협진리스트 내 전공과 일치 -->
+	<select id="myCooperation_proceeding" resultType="comedVO" parameterType="str">
+		select * from
+		(select to_char(C.co_start_date,'YYYY-MM-DD')as co_start_date,
+		to_char(C.end_date,'YYYY-MM-DD')as end_date,
+		C.co_release,
+		C.co_disease,
+		C.co_ing_status,
+		C.co_no,
+		A.d_name,
+		D.ma_name,
+		F.p_name
+		from doctor A, co_med C, major D, patient F
+		where A.d_id=C.co_doc
+		and A.ma_no=D.ma_no
+		and C.p_no=F.p_no
+		and C.co_ing_status='1')
+        where co_no in
+        (select distinct(co_no) as co_no
+        from co_med
+        where co_doc in
+        (select a.d_id
+        from doctor a, major b
+        where a.ma_no = b.ma_no
+        and b.ma_name = #{ma_no}))
+		order by co_start_date DESC
+	</select>
+	<select id="selectNameProceeding" parameterType="str" resultType="str">
+		 select distinct b.ma_name
+		 from doctor a, major b
+		 where a.ma_no = b.ma_no
+		 and b.ma_no = #{maName}
+
+	</select>
+	<select id="myCooperation_proceedingdoctors" parameterType="string" resultType="comedVO">
+		select A.d_name, B.ma_name
+		from doctor A, major B, co_doctor C, co_med D
+		where D.co_no = C.co_no
+		and A.ma_no=B.ma_no
+		and A.d_id = C.d_id
+		and C.paty_yn='Y'
+		and D.co_no=#{co_no}
+
+	</select>
+
+	<!-- 완료된협진리스트 내 전공과 일치 -->
+	<select id="myCooperation_complete" resultType="comedVO" parameterType="str">
+		select * from
+		(select to_char(C.co_start_date,'YYYY-MM-DD')as co_start_date,
+		to_char(C.end_date,'YYYY-MM-DD')as end_date,
+		C.co_release,
+		C.co_disease,
+		C.co_no,
+		A.d_name,
+		D.ma_name,
+		F.p_name
+		from doctor A, co_med C, major D, patient F
+		where A.d_id=C.co_doc
+		and A.ma_no=D.ma_no
+		and F.p_no=C.p_no
+		and C.co_ing_status='2')
+        where co_no in
+        (select distinct(co_no) as co_no
+        from co_med
+        where co_doc in
+        (select a.d_id
+        from doctor a, major b
+        where a.ma_no = b.ma_no
+        and b.ma_name = #{ma_no}))
+		order by co_start_date DESC
+	</select>
+	<select id="selectNameComplete" parameterType="str" resultType="str">
+		 select distinct b.ma_name
+		 from doctor a, major b
+		 where a.ma_no = b.ma_no
+		 and b.ma_no = #{maName}
+	</select>
+	<select id="myCooperation_completedoctors" parameterType="string" resultType="comedVO">
+		select A.d_name, B.ma_name
+		from doctor A, major B, co_doctor C, co_med D
+		where D.co_no = C.co_no
+		and A.ma_no=B.ma_no
+		and A.d_id = C.d_id
+		and C.paty_yn='Y'
+		and D.co_no=#{co_no}
+	</select>
+
+	<select id="getCoSeq" resultType="int">
+	select comedi_seq.nextval from dual
+
+	</select>
+	<select id="getNotiSeq" resultType="int">
+	select noti_seq.nextval from dual
+
+	</select>
+
+	<update id="registCoMedi" parameterType="comedVO" >
+	INSERT INTO co_med (
+    co_no,
+    p_no,
+    co_doc,
+    co_disease,
+    co_opinion,
+    co_open_date,
+    co_ing_status,
+    co_release
+) VALUES (
+   #{coNo},
+   #{pNo},
+   #{coDoc},
+   #{coDisease},
+   #{coOpinion},
+   sysdate,
+   1,
+   #{coRelease}
+)
+
+	</update>
+
+	<update id="registCoDoctor" >
+	INSERT INTO co_doctor (
+    d_id,
+    co_no,
+    paty_yn,
+    authority
+	) VALUES (
+    #{dId},
+    #{coNo},
+    #{patyYn},
+    #{authority}
+)
+
+	</update>
+	<update id="registNoti" parameterType="notiVO">
+
+INSERT INTO noti (
+    noti_no,
+    reqd_id,
+    resd_id,
+    co_no,
+    cla_no,
+    response,
+    read,
+    noti_date
+) VALUES (
+     #{notiNo},
+    #{reqdId},
+   #{resdId},
+    #{coNo},
+    1,
+    0,
+    0,
+    sysdate
+)
+
+
+	</update>
+	<!-- Attach 시퀀스 생성 -->
+	<select id="getAttachSeq" resultType="int">
+		select attach_seq.nextval from dual
+
+	</select>
+	<!-- 로그히스토리 시퀀스 생성 -->
+	<select id="getLogHistorySeq" resultType="int">
+		select log_history_seq.nextval from dual
+	</select>
+	<!-- 코멘트 시퀀스 생성 -->
+	<select id="getComComentSeq" resultType="int">
+		select com_coment_seq.nextval from dual
+	</select>
+
+</mapper>
+
